@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pooja Kapda Dukan</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f6f6f6;color:#222}
+header{background:#7b1fa2;color:white;padding:16px;text-align:center;position:sticky;top:0;z-index:5}
+header h1{margin:0;font-size:24px}.wrap{max-width:1000px;margin:auto;padding:14px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.tabs button,.btn{border:0;border-radius:9px;padding:11px 14px;background:#7b1fa2;color:#fff;font-weight:bold}
+.tabs button.active{background:#4a148c}.search{width:100%;padding:12px;border:1px solid #ddd;border-radius:9px;margin-bottom:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.card{background:white;border-radius:12px;padding:10px;box-shadow:0 2px 8px #0001}.card img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:9px;background:#eee}.card h3{font-size:16px;margin:8px 0 4px}.price{font-size:18px;font-weight:bold;color:#7b1fa2}.muted{color:#666;font-size:13px}
+.form{background:white;padding:15px;border-radius:12px;box-shadow:0 2px 8px #0001;margin-bottom:14px}.form input,.form textarea,.form select{width:100%;padding:11px;margin:6px 0 10px;border:1px solid #ddd;border-radius:8px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hidden{display:none!important}.order{background:white;padding:12px;border-radius:10px;margin:8px 0;border-left:5px solid #7b1fa2}
+.small{font-size:12px}.danger{background:#c62828}.green{background:#2e7d32}.notice{background:#fff3cd;padding:10px;border-radius:9px;margin-bottom:12px}
+footer{text-align:center;padding:30px;color:#666}
+@media(max-width:600px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><h1>पूजा कपड़ा दुकान</h1><div class="small">ऑनलाइन स्टोर</div></header>
+<div class="wrap">
+<div class="tabs">
+<button id="shopTab" class="active" onclick="showTab('shop')">🛍️ दुकान</button>
+<button onclick="showTab('cart')">🛒 कार्ट (<span id="cartCount">0</span>)</button>
+<button onclick="showTab('admin')">🔐 Admin</button>
+</div>
+
+<section id="shop">
+<input class="search" id="search" placeholder="साड़ी, शर्ट, पैंट... खोजें" oninput="renderProducts()">
+<div class="grid" id="products"></div>
+</section>
+
+<section id="cart" class="hidden">
+<div class="form"><h2>🛒 आपका कार्ट</h2><div id="cartItems"></div><h3 id="cartTotal"></h3>
+<button class="btn green" onclick="checkout()">WhatsApp पर ऑर्डर भेजें</button></div>
+</section>
+
+<section id="admin" class="hidden">
+<div id="loginBox" class="form">
+<h2>🔐 Admin Panel</h2>
+<p class="muted">पहली बार पासवर्ड: <b>1234</b> (बाद में Settings से बदल सकते हैं)</p>
+<input id="adminPass" type="password" placeholder="पासवर्ड">
+<button class="btn" onclick="login()">Login</button>
+</div>
+<div id="adminPanel" class="hidden">
+<div class="notice">यह Admin Panel इसी ब्राउज़र में डेटा सेव करता है। Netlify पर फाइल अपडेट करने की जरूरत नहीं पड़ेगी जब तक आप दूसरे मोबाइल/ब्राउज़र से डेटा चलाना न चाहें।</div>
+<div class="form">
+<h2>➕ नया माल जोड़ें</h2>
+<input id="pName" placeholder="माल का नाम">
+<div class="row"><input id="pPrice" type="number" placeholder="कीमत ₹"><input id="pStock" type="number" placeholder="स्टॉक"></div>
+<input id="pCat" placeholder="कैटेगरी (साड़ी/शर्ट/पैंट...)">
+<input id="pImg" placeholder="फोटो URL (वैकल्पिक)">
+<button class="btn" onclick="addProduct()">माल जोड़ें</button>
+</div>
+<div class="form"><h2>📦 माल की सूची</h2><div id="adminProducts"></div></div>
+<div class="form">
+<h2>⚙️ Settings</h2>
+<input id="wa" placeholder="WhatsApp नंबर, जैसे 91XXXXXXXXXX">
+<input id="newPass" type="password" placeholder="नया Admin पासवर्ड">
+<button class="btn" onclick="saveSettings()">Settings सेव करें</button>
+</div>
+</div>
+</section>
+</div>
+<footer>पूजा कपड़ा दुकान • कोहरौद</footer>
+
+<script>
+const KEY='pkd_products_v1', CART='pkd_cart_v1', SET='pkd_settings_v1';
+let products=JSON.parse(localStorage.getItem(KEY)||'[]');
+let cart=JSON.parse(localStorage.getItem(CART)||'[]');
+let settings=JSON.parse(localStorage.getItem(SET)||'{"wa":"","pass":"1234"}');
+
+if(!products.length){
+ products=[
+ {id:1,name:"सुंदर साड़ी",price:550,stock:5,cat:"साड़ी",img:""},
+ {id:2,name:"लेडीज ड्रेस",price:450,stock:4,cat:"लेडीज",img:""},
+ {id:3,name:"शर्ट",price:350,stock:5,cat:"शर्ट",img:""},
+ {id:4,name:"पैंट",price:550,stock:3,cat:"पैंट",img:""},
+ {id:5,name:"बच्चों का ड्रेस",price:300,stock:5,cat:"बच्चे",img:""}
+ ]; saveProducts();
+}
+function saveProducts(){localStorage.setItem(KEY,JSON.stringify(products))}
+function saveCart(){localStorage.setItem(CART,JSON.stringify(cart));updateCartCount()}
+function showTab(t){
+ ['shop','cart','admin'].forEach(x=>document.getElementById(x).classList.toggle('hidden',x!==t));
+ document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+ if(t==='shop')document.getElementById('shopTab').classList.add('active');
+ if(t==='cart')renderCart(); if(t==='admin'){}
+}
+function imgFor(p){return p.img||'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="500" height="500"><rect width="100%" height="100%" fill="#eee"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="28" fill="#777">${p.cat||'कपड़ा'}</text></svg>`)}
+function renderProducts(){
+ const q=(document.getElementById('search').value||'').toLowerCase();
+ const el=document.getElementById('products'); el.innerHTML='';
+ products.filter(p=>(p.name+' '+p.cat).toLowerCase().includes(q)).forEach(p=>{
+  el.innerHTML+=`<div class="card"><img src="${imgFor(p)}"><h3>${esc(p.name)}</h3><div class="muted">${esc(p.cat)} • ${p.stock>0?'उपलब्ध':'Out of stock'}</div><div class="price">₹${p.price}</div><button class="btn" ${p.stock<1?'disabled':''} onclick="addCart(${p.id})">कार्ट में डालें</button></div>`
+ })
+}
+function addCart(id){let p=products.find(x=>x.id===id); if(!p||p.stock<1)return; cart.push({id,qty:1});saveCart();alert('सामान कार्ट में जोड़ दिया गया');}
+function updateCartCount(){document.getElementById('cartCount').textContent=cart.reduce((s,x)=>s+x.qty,0)}
+function renderCart(){
+ let el=document.getElementById('cartItems'); if(!cart.length){el.innerHTML='<p>कार्ट खाली है।</p>';document.getElementById('cartTotal').textContent='';return}
+ let total=0; el.innerHTML='';
+ cart.forEach((x,i)=>{let p=products.find(y=>y.id===x.id); if(!p)return; total+=p.price*x.qty; el.innerHTML+=`<div class="order"><b>${esc(p.name)}</b> — ₹${p.price} × ${x.qty} <button class="btn danger" onclick="cart.splice(${i},1);saveCart();renderCart()">हटाएँ</button></div>`});
+ document.getElementById('cartTotal').textContent='कुल: ₹'+total;
+}
+function checkout(){
+ if(!cart.length)return alert('कार्ट खाली है');
+ let lines=['नमस्ते, पूजा कपड़ा दुकान में ऑर्डर करना है:',''];
+ let total=0;
+ cart.forEach(x=>{let p=products.find(y=>y.id===x.id);if(p){lines.push(`${p.name} - ₹${p.price} × ${x.qty}`);total+=p.price*x.qty}});
+ lines.push('',`कुल: ₹${total}`,'','नाम:','पता:');
+ let wa=(settings.wa||'').replace(/\D/g,''); if(!wa)return alert('Admin Panel → Settings में WhatsApp नंबर सेव करें');
+ location.href='https://wa.me/'+wa+'?text='+encodeURIComponent(lines.join('\n'));
+}
+function login(){if(document.getElementById('adminPass').value===settings.pass){document.getElementById('loginBox').classList.add('hidden');document.getElementById('adminPanel').classList.remove('hidden');renderAdmin();document.getElementById('wa').value=settings.wa||''}else alert('पासवर्ड गलत है')}
+function renderAdmin(){
+ let el=document.getElementById('adminProducts');el.innerHTML='';
+ products.forEach(p=>el.innerHTML+=`<div class="order"><b>${esc(p.name)}</b> — ₹${p.price} — स्टॉक ${p.stock}<br><button class="btn danger" onclick="delProduct(${p.id})">हटाएँ</button></div>`)
+}
+function addProduct(){
+ let name=pName.value.trim(),price=Number(pPrice.value),stock=Number(pStock.value),cat=pCat.value.trim(),img=pImg.value.trim();
+ if(!name||!price)return alert('नाम और कीमत भरें');
+ products.push({id:Date.now(),name,price,stock,cat,img});saveProducts();pName.value=pPrice.value=pStock.value=pCat.value=pImg.value='';renderAdmin();renderProducts();alert('माल जोड़ दिया गया');
+}
+function delProduct(id){if(confirm('यह माल हटाएँ?')){products=products.filter(p=>p.id!==id);saveProducts();renderAdmin();renderProducts()}}
+function saveSettings(){
+ settings.wa=document.getElementById('wa').value.trim();
+ if(document.getElementById('newPass').value)settings.pass=document.getElementById('newPass').value;
+ localStorage.setItem(SET,JSON.stringify(settings));alert('Settings सेव हो गईं');
+}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+renderProducts();updateCartCount();
+</script>
+</body></html>
